@@ -4,60 +4,103 @@
 #include <QGraphicsEllipseItem>
 #include <QGraphicsTextItem>
 #include <QGraphicsLineItem>
+#include <QStringList>
+#include <QDebug>
 
-int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
+// Clase para representar un NFA básico
+class BasicNFA {
+public:
+    int estadoInicial;
+    int estadoFinal;
+    QString transicion;
 
-    // Create the scene
-    QGraphicsScene scene;
-    scene.setSceneRect(0, 0, 600, 200);
+    BasicNFA(int inicial, int final, QString trans) : estadoInicial(inicial), estadoFinal(final), transicion(trans) {}
+};
+
+// Función para generar el NFA a partir de la entrada
+void generarNFA(QGraphicsScene& scene, const QStringList& entrada) {
+    // Limpiar la escena antes de agregar nuevos elementos
+    scene.clear();
 
     // Node size and spacing
     const int nodeWidth = 50;
     const int nodeHeight = 50;
     const int nodeSpacing = 150;
 
-    // Create the nodes (states) of the automaton
-    QGraphicsEllipseItem *state0 = scene.addEllipse(0, 0, nodeWidth, nodeHeight);
-    QGraphicsTextItem *state0Label = new QGraphicsTextItem("0", state0);
-    state0Label->setPos((nodeWidth - state0Label->boundingRect().width()) / 2,
-                        (nodeHeight - state0Label->boundingRect().height()) / 2);
+    // Variable para almacenar la cantidad de estados
+    int numEstados = 0;
 
-    QGraphicsEllipseItem *state1 = scene.addEllipse(0, 0, nodeWidth, nodeHeight);
-    QGraphicsTextItem *state1Label = new QGraphicsTextItem("1", state1);
-    state1Label->setPos((nodeWidth - state1Label->boundingRect().width()) / 2,
-                        (nodeHeight - state1Label->boundingRect().height()) / 2);
+    // Buscar la línea que contiene el número de estados
+    QString numEstadosStr;
+    for (const QString& line : entrada) {
+        if (line.startsWith("Número de estados:")) {
+            numEstadosStr = line.split(":")[1].trimmed();
+            numEstados = numEstadosStr.toInt();
+            break;
+        }
+    }
 
-    QGraphicsEllipseItem *state2 = scene.addEllipse(0, 0, nodeWidth, nodeHeight);
-    QGraphicsTextItem *state2Label = new QGraphicsTextItem("2", state2);
-    state2Label->setPos((nodeWidth - state2Label->boundingRect().width()) / 2,
-                        (nodeHeight - state2Label->boundingRect().height()) / 2);
+    if (numEstados == 0) {
+        qDebug() << "Error: No se pudo encontrar el número de estados en la entrada.";
+        return;
+    }
 
-    QGraphicsEllipseItem *state3 = scene.addEllipse(0, 0, nodeWidth, nodeHeight);
-    QGraphicsTextItem *state3Label = new QGraphicsTextItem("3", state3);
-    state3Label->setPos((nodeWidth - state3Label->boundingRect().width()) / 2,
-                        (nodeHeight - state3Label->boundingRect().height()) / 2);
+    // Crear los nodos (estados) del autómata
+    QList<QGraphicsEllipseItem*> states;
+    QList<QGraphicsTextItem*> stateLabels;
 
-    // Position the nodes
-    state0->setPos(scene.width() / 2 - nodeSpacing - nodeWidth, scene.height() / 2 - nodeHeight / 2);
-    state1->setPos(scene.width() / 2 - nodeSpacing / 2 - nodeWidth / 2, scene.height() / 2 - nodeHeight / 2);
-    state2->setPos(scene.width() / 2 + nodeSpacing / 2 - nodeWidth / 2, scene.height() / 2 - nodeHeight / 2);
-    state3->setPos(scene.width() / 2 + nodeSpacing + nodeWidth / 2, scene.height() / 2 - nodeHeight / 2);
+    // Agregar estados según el número especificado
+    for (int i = 0; i < numEstados; ++i) {
+        QGraphicsEllipseItem *state = scene.addEllipse(0, 0, nodeWidth, nodeHeight);
+        QGraphicsTextItem *stateLabel = new QGraphicsTextItem(QString::number(i), state);
+        stateLabel->setPos((nodeWidth - stateLabel->boundingRect().width()) / 2,
+                            (nodeHeight - stateLabel->boundingRect().height()) / 2);
+        state->setPos((i + 1) * nodeSpacing, scene.height() / 2 - nodeHeight / 2);
+        states.append(state);
+        stateLabels.append(stateLabel);
+    }
 
-    // Create the transitions between the nodes
-    scene.addLine(state0->x() + nodeWidth, state0->y() + nodeHeight / 2, state1->x(), state1->y() + nodeHeight / 2);
-    scene.addLine(state1->x() + nodeWidth, state1->y() + nodeHeight / 2, state2->x(), state2->y() + nodeHeight / 2);
-    scene.addLine(state2->x() + nodeWidth, state2->y() + nodeHeight / 2, state3->x(), state3->y() + nodeHeight / 2);
+//Dibujar transiciones
+for (int i = 0; i < entrada.size(); ++i) {
+    if (entrada[i].startsWith("NFA básico")) {
+        QString estadoInicialStr = entrada[i + 1].split(":")[1].trimmed();
+        QString estadoFinalStr = entrada[i + 2].split(":")[1].trimmed();
+        QString transicion = entrada[i + 3].split(":")[1].trimmed();
+        qDebug() << "Estado Inicial:" << estadoInicialStr << "Estado Final:" << estadoFinalStr << "Transición:" << transicion;
+        int estadoInicial = estadoInicialStr.toInt();
+        int estadoFinal = estadoFinalStr.toInt();
 
-    // Create labels for transitions
-    QGraphicsTextItem *label_0_1 = scene.addText("a");
-    label_0_1->setPos((state0->x() + state1->x()) / 2, (state0->y() + state1->y()) / 2);
+        // Verificar que los estados estén dentro del rango
+        if (estadoInicial < 0 || estadoInicial >= numEstados || estadoFinal < 0 || estadoFinal >= numEstados) {
+            qDebug() << "Error: Estado fuera de rango.";
+            continue;
+        }
 
-    QGraphicsTextItem *label_1_2 = scene.addText("b");
-    label_1_2->setPos((state1->x() + state2->x()) / 2, (state1->y() + state2->y()) / 2);
+        // Crear la transición entre los estados
+        QGraphicsLineItem *transition = scene.addLine(states[estadoInicial]->x() + nodeWidth, states[estadoInicial]->y() + nodeHeight / 2,
+                                                       states[estadoFinal]->x(), states[estadoFinal]->y() + nodeHeight / 2);
+        QGraphicsTextItem *label = scene.addText(transicion);
+        label->setPos((states[estadoInicial]->x() + states[estadoFinal]->x()) / 2, (states[estadoInicial]->y() + states[estadoFinal]->y()) / 2);
+    }
+}
 
-    QGraphicsTextItem *label_2_3 = scene.addText("a");
-    label_2_3->setPos((state2->x() + state3->x()) / 2, (state2->y() + state3->y()) / 2);
+}
+
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+
+    // Create the scene
+    QGraphicsScene scene;
+    scene.setSceneRect(0, 0, 800, 200);
+
+    // Entrada de ejemplo
+    QStringList entrada;
+    entrada << "Número de estados: 4" << "Construcción de NFA básicos:" << "NFA básico 1:" << "Estado Inicial: 0" << "Estado Final: 1" << "Transición: a"
+            << "NFA básico 2:" << "Estado Inicial: 1" << "Estado Final: 2" << "Transición: b" << "NFA básico 3:" << "Estado Inicial: 2"
+            << "Estado Final: 3" << "Transición: a";
+
+    // Generar el NFA a partir de la entrada
+    generarNFA(scene, entrada);
 
     // Create the view and show it
     QGraphicsView view(&scene);
@@ -65,4 +108,3 @@ int main(int argc, char *argv[]) {
 
     return app.exec();
 }
-
