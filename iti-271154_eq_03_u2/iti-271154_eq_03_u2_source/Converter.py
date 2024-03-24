@@ -10,7 +10,6 @@ class Automaton:
         self.final_states = final_states
 
 def parse_regex(regex_str):
-    # Analiza la expresión regular y genera un autómata finito determinista (DFA)
     states = set()
     alphabet = set()
     transitions = {}
@@ -35,11 +34,7 @@ def parse_regex(regex_str):
             current_state = stack.pop()
         elif char == '*':
             previous_state = stack[-1]
-            new_state = get_next_state()
-            states.add(new_state)
-            transitions[(previous_state, '')] = new_state
-            transitions[(new_state, '')] = previous_state
-            stack[-1] = new_state
+            transitions[(previous_state, '')] = current_state
         elif char == '+':
             pass
         else:
@@ -49,12 +44,11 @@ def parse_regex(regex_str):
             current_state = new_state
             alphabet.add(char)
 
-    final_states.add(current_state)
+    final_states.add(new_state)  # Añadir el estado final al final del procesamiento
 
     return Automaton(states, alphabet, transitions, initial_state, final_states)
 
 def build_transition_string(automaton):
-    # Construye la cadena de transiciones del autómata
     transition_string = ""
     for state in automaton.states:
         for symbol in automaton.alphabet:
