@@ -1,6 +1,5 @@
 from postfix2nfa import NFA
 from nfa2dfa import DFA
-from dfa2min import MIN_DFA
 from regex2postfix import POSTFIX, validateRegex
 
 def reformat_dfa(dfa):
@@ -86,7 +85,7 @@ def convert_to_desired_format(nfa_dict):
 
 def main():
 #Cases: d(d*(b+a)+c), (a*b), (a*b)*, (a+b), b*b+da
-    cases = {0: 'b*b+da'}
+    cases = {0: '(a*b)'}
     regex = cases[0]
 
     # regex = input("Enter regular expression: ")
@@ -108,24 +107,9 @@ def main():
         dfa.visualize(name='output/dfa.gv', view=False)
         print("----------------------------------------------------------------")
         construct_dfa = convert_to_desired_format(dfa.toDict())
-        minDfa = MIN_DFA(dfa)
-        print("Minimized DFA: ", minDfa.toDict())
-        minDfa.visualize(name='output/min_dfa.gv', view=False)
-        print("----------------------------------------------------------------")
         print(f"Structure NFA: \n{convert_to_desired_format(nfa.toDict())}")
-        
-        try:
-            accepting_states = [state for state, data in minDfa.items() if isinstance(data, dict) and data.get('isTerminatingState', False)]
-            # Estados de aceptación
-            if accepting_states:
-            	print(f"Structure DFA: \n{convert_to_desired_format(minDfa.toDict())}")
-            else:
-                #print(f"Structure DFA:")
-                print(f"Structure DFA: \n{construct_dfa}")
-        except AttributeError:
-            #print(f"Structure DFA:")
-            print(f"Structure DFA: \n{construct_dfa}")
-
+        print(f"Structure DFA: \n{construct_dfa}")
+      
     # catch the exception and print it
     except Exception as e:
         print(e)
