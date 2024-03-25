@@ -1,4 +1,6 @@
 #include <iostream>
+#include<math.h>
+#include <locale>
 #include <vector>
 #include <map>
 #include <set>
@@ -15,10 +17,10 @@ NFA postfix2nfa(std::string postfix) {
             nfaStack.pop_back();
             State* start = new State("S" + std::to_string(i));
             State* accept = new State("S" + std::to_string(i + 1));
-            start->add_transition('ϵ', nfa1.start);
-            start->add_transition('ϵ', accept);
-            nfa1.accept->add_transition('ϵ', start);
-            nfa1.accept->add_transition('ϵ', accept);
+            start->add_transition("ε", nfa1.start);
+            start->add_transition("ε", accept);
+            nfa1.accept->add_transition("ε", start);
+            nfa1.accept->add_transition("ε", accept);
             nfaStack.push_back(NFA(start, accept));
             i += 2;
         } else if (c == '.') {
@@ -26,7 +28,7 @@ NFA postfix2nfa(std::string postfix) {
             nfaStack.pop_back();
             NFA nfa1 = nfaStack.back();
             nfaStack.pop_back();
-            nfa1.accept->add_transition('ϵ', nfa2.start);
+            nfa1.accept->add_transition("ε", nfa2.start);
             nfaStack.push_back(NFA(nfa1.start, nfa2.accept));
         } else if (c == '|') {
             NFA nfa2 = nfaStack.back();
@@ -35,10 +37,10 @@ NFA postfix2nfa(std::string postfix) {
             nfaStack.pop_back();
             State* start = new State("S" + std::to_string(i));
             State* accept = new State("S" + std::to_string(i + 1));
-            start->add_transition('ϵ', nfa1.start);
-            start->add_transition('ϵ', nfa2.start);
-            nfa1.accept->add_transition('ϵ', accept);
-            nfa2.accept->add_transition('ϵ', accept);
+            start->add_transition("ε", nfa1.start);
+            start->add_transition("ε", nfa2.start);
+            nfa1.accept->add_transition("ε", accept);
+            nfa2.accept->add_transition("ε", accept);
             nfaStack.push_back(NFA(start, accept));
             i += 2;
         } else if (c == '+') {
@@ -46,9 +48,9 @@ NFA postfix2nfa(std::string postfix) {
             nfaStack.pop_back();
             State* start = new State("S" + std::to_string(i));
             State* accept = new State("S" + std::to_string(i + 1));
-            start->add_transition('ϵ', nfa1.start);
-            nfa1.accept->add_transition('ϵ', start);
-            nfa1.accept->add_transition('ϵ', accept);
+            start->add_transition("ε", nfa1.start);
+            nfa1.accept->add_transition("ε", start);
+            nfa1.accept->add_transition("ε", accept);
             nfaStack.push_back(NFA(start, accept));
             i += 2;
         } else if (c == '?') {
@@ -56,15 +58,15 @@ NFA postfix2nfa(std::string postfix) {
     nfaStack.pop_back();
     State* start = new State("S" + std::to_string(i));
     State* accept = new State("S" + std::to_string(i + 1));
-    start->add_transition('ϵ', nfa1.start);
-    start->add_transition('ϵ', accept);
-    nfa1.accept->add_transition('ϵ', accept);
+    start->add_transition("ε", nfa1.start);
+    start->add_transition("ε", accept);
+    nfa1.accept->add_transition("ε", accept);
     nfaStack.push_back(NFA(start, accept));
     i += 2;
 } else {
             State* start = new State("S" + std::to_string(i));
             State* accept = new State("S" + std::to_string(i + 1));
-            start->add_transition(c, accept);
+            start->add_transition(std::string(1, c), accept);
             nfaStack.push_back(NFA(start, accept));
             i += 2;
         }
@@ -73,6 +75,8 @@ NFA postfix2nfa(std::string postfix) {
     return nfaStack.back();
 }
 int main() {
+    
+    setlocale(LC_ALL, "en_US.UTF-8");
     try {
    string regex;
     cout << "Ingrese la expresion regular: ";
@@ -91,7 +95,7 @@ int main() {
     cout << "------------------------------------------------------------" << endl;
 
     NFA nfa = postfix2nfa(postfix.get_postfix());
-        std::map<std::string, std::map<char, std::string>> dict = nfa.toDict();
+        std::map<std::string, std::map<std::string, std::string>> dict = nfa.toDict();
 
         // Imprimir estados
         std::cout << "#states" << std::endl;
@@ -113,9 +117,9 @@ int main() {
 
         // Imprimir alfabeto
         std::cout << "#alphabet" << std::endl;
-        std::vector<char> alphabet = nfa.getSymbols();
+        std::vector<std::string> alphabet = nfa.getSymbols();
         for (auto symbol : alphabet) {
-            if (symbol != '\0') { // Ignorar el carácter nulo
+            if (!symbol.empty()) { // Ignorar el carácter nulo
                 std::cout << symbol << std::endl;
             }
         }

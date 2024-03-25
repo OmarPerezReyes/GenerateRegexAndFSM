@@ -21,7 +21,7 @@ class DFA:
             state = stack.pop()
             for symbol, next_state in state.transitions:
                 if next_state not in closure:
-                    if symbol == "ϵ":
+                    if symbol == "ε":
                         closure.add(next_state)
                         stack.append(next_state)
         # convert set to list

@@ -14,9 +14,9 @@ public:
 
     std::vector<State*> getStates();
 
-    std::vector<char> getSymbols();
+    std::vector<std::string> getSymbols(); // Changed from char to std::string
 
-    std::map<std::string, std::map<char, std::string>> toDict();
+    std::map<std::string, std::map<std::string, std::string>> toDict(); // Changed from char to std::string
 };
 
 #endif /* NFA_H */

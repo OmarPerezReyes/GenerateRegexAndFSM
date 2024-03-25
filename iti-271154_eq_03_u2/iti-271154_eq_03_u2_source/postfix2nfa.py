@@ -49,7 +49,7 @@ class NFA:
         symbols = set()
         for state in states:
             for symbol, next_state in state.transitions:
-                if symbol != 'ϵ':
+                if symbol != "ε":
                     symbols.add(symbol)
         # convert to list of symbols
         return list(symbols)
@@ -61,43 +61,43 @@ class NFA:
             if c == '*':
                 nfa1 = nfaStack.pop()
                 start, accept = State('S' + str(i)), State('S' + str(i + 1))
-                start.add_transition('ϵ', nfa1.start)
-                start.add_transition('ϵ', accept)
-                nfa1.accept.add_transition('ϵ', start)
-                nfa1.accept.add_transition('ϵ', accept)
+                start.add_transition("ε", nfa1.start)
+                start.add_transition("ε", accept)
+                nfa1.accept.add_transition("ε", start)
+                nfa1.accept.add_transition("ε", accept)
                 nfaStack.append(NFA(start, accept))
                 i += 2
 
             elif c == '.':
                 nfa2, nfa1 = nfaStack.pop(), nfaStack.pop()
-                nfa1.accept.add_transition('ϵ', nfa2.start)
+                nfa1.accept.add_transition("ε", nfa2.start)
                 nfaStack.append(NFA(nfa1.start, nfa2.accept))
 
             elif c == '|':
                 nfa2, nfa1 = nfaStack.pop(), nfaStack.pop()
                 start, accept = State('S' + str(i)), State('S' + str(i + 1))
-                start.add_transition('ϵ', nfa1.start)
-                start.add_transition('ϵ', nfa2.start)
-                nfa1.accept.add_transition('ϵ', accept)
-                nfa2.accept.add_transition('ϵ', accept)
+                start.add_transition("ε", nfa1.start)
+                start.add_transition("ε", nfa2.start)
+                nfa1.accept.add_transition("ε", accept)
+                nfa2.accept.add_transition("ε", accept)
                 nfaStack.append(NFA(start, accept))
                 i += 2
 
             elif c == '+':
                 nfa1 = nfaStack.pop()
                 start, accept = State('S' + str(i)), State('S' + str(i + 1))
-                start.add_transition('ϵ', nfa1.start)
-                nfa1.accept.add_transition('ϵ', start)
-                nfa1.accept.add_transition('ϵ', accept)
+                start.add_transition("ε", nfa1.start)
+                nfa1.accept.add_transition("ε", start)
+                nfa1.accept.add_transition("ε", accept)
                 nfaStack.append(NFA(start, accept))
                 i += 2
 
             elif c == '?':
                 nfa1 = nfaStack.pop()
                 start, accept = State('S' + str(i)), State('S' + str(i + 1))
-                start.add_transition('ϵ', nfa1.start)
-                start.add_transition('ϵ', accept)
-                nfa1.accept.add_transition('ϵ', accept)
+                start.add_transition("ε", nfa1.start)
+                start.add_transition("ε", accept)
+                nfa1.accept.add_transition("ε", accept)
                 nfaStack.append(NFA(start, accept))
                 i += 2
 
