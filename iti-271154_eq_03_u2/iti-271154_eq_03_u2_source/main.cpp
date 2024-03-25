@@ -3,6 +3,8 @@
 #include <map>
 #include <set>
 #include "NFA.h"
+#include "POSTFIX.h"
+using namespace std;
 NFA postfix2nfa(std::string postfix) {
     std::vector<NFA> nfaStack;
     int i = 0;
@@ -72,7 +74,23 @@ NFA postfix2nfa(std::string postfix) {
 }
 int main() {
     try {
-        NFA nfa = postfix2nfa("dd*b+a.+.c..");
+   string regex;
+    cout << "Ingrese la expresion regular: ";
+    cin >> regex;
+
+    if (!validateRegex(regex)) {
+        cout << "Expresion regular invalida." << endl;
+        return 1;
+    }
+
+    POSTFIX postfix(regex);
+    cout << "------------------------------------------------------------" << endl;
+    cout << "regex: " << regex << endl;
+    cout << "------------------------------------------------------------" << endl;
+    cout << "postfix: " << postfix.get_postfix() << endl;
+    cout << "------------------------------------------------------------" << endl;
+
+    NFA nfa = postfix2nfa(postfix.get_postfix());
         std::map<std::string, std::map<char, std::string>> dict = nfa.toDict();
 
         // Imprimir estados
