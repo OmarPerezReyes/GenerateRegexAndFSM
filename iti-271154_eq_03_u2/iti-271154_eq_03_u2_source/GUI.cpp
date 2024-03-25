@@ -85,7 +85,7 @@ def convert_to_desired_format(nfa_dict):
 
 def main():
 #Cases: d(d*(b+a)+c), (a*b), (a*b)*, (a+b), b*b+da
-    cases = {0: 'd(d*(b+a)+c)'}
+    cases = {0: '(a*b)'}
     regex = cases[0]
 
     # regex = input("Enter regular expression: ")
@@ -99,7 +99,7 @@ def main():
         print("postfix: ", postfix.get_postfix())
         print("----------------------------------------------------------------")
         nfa = NFA(postfix=postfix.get_postfix())
-        print("NFA: ", nfa.toDict())
+        #print("NFA: ", nfa.toDict())
         nfa.visualize(name='output/nfa.gv', view=False)
         print("----------------------------------------------------------------")
         dfa = DFA(nfa)
