@@ -6,6 +6,7 @@
 #include <set>
 #include "NFA.h"
 #include "POSTFIX.h"
+#include "DFA.h"
 using namespace std;
 NFA postfix2nfa(std::string postfix) {
     std::vector<NFA> nfaStack;
@@ -96,6 +97,8 @@ int main() {
 
     NFA nfa = postfix2nfa(postfix.get_postfix());
         std::map<std::string, std::map<std::string, std::string>> dict = nfa.toDict();
+        
+        nfa2dfa(nfa);                                                                   // Convertir NFA a DFA
 
         // Imprimir estados
         std::cout << "#states" << std::endl;
