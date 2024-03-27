@@ -60,7 +60,7 @@ def reformat_dfa(dfa):
 
 
 def convert_to_desired_format(nfa_dict):
-    #nfa_dict = reformat_dfa(nfa_dict)
+    nfa_dict = reformat_dfa(nfa_dict)
     states = [state for state in nfa_dict.keys() if state != 'startingState']  # Obtenemos la lista de estados excluyendo el estado inicial
     initial_state = nfa_dict['startingState']  # Estado inicial
     accepting_states = [state for state, data in nfa_dict.items() if isinstance(data, dict) and data.get('isTerminatingState', False)]  # Estados de aceptación
