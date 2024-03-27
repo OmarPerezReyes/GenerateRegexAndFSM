@@ -8,28 +8,6 @@
 #include <QRandomGenerator>
 #include <QLineEdit>
 #include <QGraphicsView>
-#include <QInputDialog>
-#include <QPainter>
-#include <QPointF>
-#include <QVector>
-#include <QRandomGenerator>
-#include <QVBoxLayout>
-#include <QMenu>
-#include <QtMath>
-#include <QMainWindow>
-#include <QMouseEvent>
-#include <QMessageBox>
-#include <QApplication>
-#include <QWidget>
-#include <QPushButton>
-#include <QLabel>
-#include <QDebug>
-#include <QWidget>
-#include <QStringList>
-#include <QRandomGenerator>
-#include <QLineEdit>
-#include <QGraphicsView>
-#include <QInputDialog>
 #include <QPainter>
 #include <QPointF>
 #include <QVector>
@@ -125,38 +103,63 @@ NFA postfix2nfa(std::string postfix) {
 class MainWindow : public QWidget {
 public:
     MainWindow(QWidget *parent = nullptr) : QWidget(parent) {
-        setMinimumWidth(1900); // Establecer el ancho mínimo de la ventana
+        setMinimumWidth(1250); // Establecer el ancho mínimo de la ventana
+                setMinimumHeight(600); // Establecer el ancho mínimo de la ventana
+// Configuración del diseño principal
+QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
-        // Configuración del diseño horizontal para alinear en la parte superior
-        QHBoxLayout* mainLayout = new QHBoxLayout(this);
+// Configuración del diseño horizontal para organizar los elementos de entrada y etiquetas
+QHBoxLayout* inputRowLayout = new QHBoxLayout();
 
-        // Configuración del diseño vertical para organizar los botones y el QLineEdit
-        QVBoxLayout* buttonLayout = new QVBoxLayout();
-        buttonLayout->setAlignment(Qt::AlignTop); // Alinear en la parte superior
-
-        // Configuración de los botones
-        buttonNFA.setText("Generate NFA");
-
-
-        // Agregar los botones al diseño vertical
-        buttonLayout->addWidget(&buttonNFA);
+// Configuración del diseño horizontal para organizar los botones
+QHBoxLayout* buttonRowLayout = new QHBoxLayout();
 
 
-        // Crear un QLineEdit
-        inputText.setParent(this);
+// Configuración del diseño horizontal para mostrar cadena de construcción
+QHBoxLayout* outputStringRowLayout = new QHBoxLayout();
 
-        // Agregar el QLineEdit al diseño vertical
-        buttonLayout->addWidget(&inputText);
+// Configuración de las etiquetas
+QLabel* labelRegex = new QLabel("Regex:");
+QLabel* labelPosfix = new QLabel("Posfix:");
 
+// Configuraciónm de QLineEdit
+inputRegex.setParent(this);
+outputPostfix.setReadOnly(true); // Hacer que el QLineEdit sea no editable
+outputConstructionFSM.setParent(this);
 
-        // Agregar el diseño vertical al diseño horizontal
-        mainLayout->addLayout(buttonLayout);
+// Configuración de los botones
+buttonRandomRegex.setText("Generate Random Regex");
+buttonGenerateNFA.setText("Generate NFA");
+buttonGenerateDFA.setText("Generate DFA");
+buttonDrawFSM.setText("Draw FSM");
 
-        // Establecer el diseño en la ventana principal
-        setLayout(mainLayout);
+// Agregar elementos de entrada y etiquetas al diseño horizontal
+inputRowLayout->addWidget(labelRegex);
+inputRowLayout->addWidget(&inputRegex);
+inputRowLayout->addWidget(labelPosfix);
+inputRowLayout->addWidget(&outputPostfix);
+inputRowLayout->addWidget(&buttonRandomRegex);
+
+// Agregar botones al diseño horizontal
+
+buttonRowLayout->addWidget(&buttonGenerateNFA);
+buttonRowLayout->addWidget(&buttonGenerateDFA);
+buttonRowLayout->addWidget(&buttonDrawFSM);
+
+//Agregar zona impresión
+outputStringRowLayout->addWidget(&outputConstructionFSM);
+
+// Agregar los diseños horizontales al diseño principal
+mainLayout->addLayout(inputRowLayout);
+mainLayout->addLayout(buttonRowLayout);
+mainLayout->addLayout(outputStringRowLayout);
+
+// Establecer el diseño en la ventana principal
+setLayout(mainLayout);
+
 
         // Conectar los botones a las funciones correspondientes
-        connect(&buttonNFA, &QPushButton::clicked, this, &MainWindow::GenerateRNFA);
+        connect(&buttonGenerateNFA, &QPushButton::clicked, this, &MainWindow::GenerateRNFA);
 
 
         // Inicializar el color para los estados finales
@@ -164,8 +167,8 @@ public:
     }
 
     void GenerateRNFA() {
-        QString input = inputText.text(); // Obtener el texto del QLineEdit
-        QString qString = inputText.text(); // Obtener el texto del QLineEdit
+        QString input = inputRegex.text(); // Obtener el texto del QLineEdit
+        QString qString = inputRegex.text(); // Obtener el texto del QLineEdit
 
  try {
    string regex=input.toStdString();
@@ -241,7 +244,7 @@ if (lastEndlPos != std::string::npos) {
     outputString = outputString.substr(0, lastEndlPos);
 }
 
-    // Ahora puedes usar 'outputString' como desees, por ejemplo, imprimirlo en la consola
+
     //std::cout << outputString << std::endl;
     qString = QString::fromStdString(outputString);
 
@@ -293,18 +296,22 @@ protected:
         QWidget::paintEvent(event);
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing, true);
+        qreal x = -100; // coordenada x de inicio
+    qreal y = 250; // coordenada y de inicio
         switch (activeMethod)
         {
         case 0:
             // Dibujar el grafo NFA
-            DrawGenerateRNFA(painter);
+        DrawGenerateRNFA(painter, x, y);
+
             break;
 
         default:
             break;
         }
     }
-    void DrawGenerateRNFA(QPainter &painter) {
+    void DrawGenerateRNFA(QPainter &painter, qreal startX, qreal startY) {
+    
         //Definir las posiciones de los estados en el lienzo
         QMap<QString, QPointF> statePositions;
         qreal radius = 30.0; //Radio de los círculos de los estados
@@ -318,16 +325,16 @@ protected:
             incomingTransitionsCount[toState]++;
         }
 
-        //Asignar las posiciones de los estados
-        for (int i = 0; i < states.size(); ++i) {
-            qreal x = (i + 1) * spacing;
-            qreal y = height() / 2; //Altura central
-            //Si es el estado s1, lo dibujamos más abajo
-            if (states[i] == "s1") {
-                y += 100.0; //Ajustamos la posición hacia abajo
-            }
-            statePositions.insert(states[i], QPointF(x, y));
+         // Asigna las posiciones de los estados
+    for (int i = 0; i < states.size(); ++i) {
+        qreal x = startX + (i + 1) * spacing;
+        qreal y = startY + height() / 2; // Ajusta según la posición de inicio y la altura del lienzo
+        // Si es el estado s1, lo dibujamos más abajo
+        if (states[i] == "s1") {
+            y += 100.0; // Ajustamos la posición hacia abajo
         }
+        statePositions.insert(states[i], QPointF(x, y));
+    }
 
         //Dibujar las transiciones como curvas
         painter.setPen(Qt::black);
@@ -457,8 +464,13 @@ protected:
 
 
 private:
-    QLineEdit inputText;
-    QPushButton buttonNFA;
+    QLineEdit outputConstructionFSM;
+    QLineEdit inputRegex;
+    QLineEdit outputPostfix;
+    QPushButton buttonRandomRegex;
+    QPushButton buttonGenerateNFA;
+    QPushButton buttonGenerateDFA;
+    QPushButton buttonDrawFSM;
     QPushButton buttoneNFA;
     QPushButton GraphButton;
     QGridLayout layout;
@@ -474,9 +486,6 @@ private:
     qreal radius = 30.0; //Radio de los círculos de los estados
     QColor finalStateColor; //Color de relleno para los estados finales
 };
-
-
-
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
