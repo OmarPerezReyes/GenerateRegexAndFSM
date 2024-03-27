@@ -19,5 +19,5 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 # Input
 HEADERS += DFA.h NFA.h POSTFIX.h State.h
-SOURCES += main.cpp NFA.cpp State.cpp
+SOURCES += main.cpp NFA.cpp State.cpp DFA.cpp
 QT += widgets

@@ -1,39 +1,29 @@
 #ifndef DFA_H
 #define DFA_H
 
-#include <string>
-#include <unordered_map>
-#include <vector>
-#include <deque>
-
-class State {
-public:
-    std::string label;
-    std::unordered_map<std::string, State*> transitions;
-    bool isAcceptingState;
-
-    State(const std::string& label, bool isAcceptingState = false);
-    ~State();
-};
+#include "NFA.h"
+#include <iostream>
+#include <queue>
+#include <set>
+#include <map>
 
 class DFA {
-private:
-    std::unordered_map<std::string, State*> states;
-    State* startState;
-
 public:
-    DFA(State* startState);
-    ~DFA();
+    DFA(NFA nfa);
+    std::map<std::string, std::map<std::string, std::string>> toDict();
+    void printDFA();
 
-    void addState(State* state);
-    State* getStateByLabel(const std::string& label);
-    std::vector<State*> getStatesByLabel(const std::vector<std::string>& labels);
-    std::vector<std::string> getSymbols();
-    std::string epsilonClosure(const std::vector<State*>& states);
-    std::vector<State*> move(const std::vector<State*>& states, const std::string& symbol);
-    void nfa2dfa(/* Parámetros necesarios para la conversión */);
-    std::unordered_map<std::string, State*> toDict();
-    void visualize(const std::string& name = "output/dfa.gv", bool view = false);
+private:
+    NFA nfa;
+    std::map<std::set<State*>, std::string> states;
+    std::string initialState;
+    std::set<std::string> acceptingStates;
+    std::set<std::string> alphabet;
+    std::map<std::set<State*>, std::map<std::string, std::set<State*>>> transitions;
+
+    void constructDFA();
+    std::set<State*> epsilonClosure(const std::set<State*>& states);
+    std::set<State*> move(const std::set<State*>& states, const std::string& symbol);
 };
 
-#endif // DFA_H
+#endif /* DFA_H */
