@@ -60,7 +60,7 @@ def reformat_dfa(dfa):
 
 
 def convert_to_desired_format(nfa_dict):
-    nfa_dict = reformat_dfa(nfa_dict)
+    #nfa_dict = reformat_dfa(nfa_dict)
     states = [state for state in nfa_dict.keys() if state != 'startingState']  # Obtenemos la lista de estados excluyendo el estado inicial
     initial_state = nfa_dict['startingState']  # Estado inicial
     accepting_states = [state for state, data in nfa_dict.items() if isinstance(data, dict) and data.get('isTerminatingState', False)]  # Estados de aceptación
@@ -85,7 +85,7 @@ def convert_to_desired_format(nfa_dict):
 
 def main():
 #Cases: d(d*(b+a)+c), (a*b), (a*b)*, (a+b), b*b+da
-    cases = {0: 'd(d*(b+a)+c)'}
+    cases = {0: '(a+b)'}
     regex = cases[0]
 
     # regex = input("Enter regular expression: ")
