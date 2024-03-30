@@ -102,88 +102,147 @@ NFA postfix2nfa(std::string postfix) {
 }
 class MainWindow : public QWidget {
 public:
-    MainWindow(QWidget *parent = nullptr) : QWidget(parent) {
-        setMinimumWidth(1250); // Establecer el ancho mínimo de la ventana
-                setMinimumHeight(600); // Establecer el ancho mínimo de la ventana
-// Configuración del diseño principal
-QVBoxLayout* mainLayout = new QVBoxLayout(this);
+ MainWindow(QWidget *parent = nullptr) : QWidget(parent) {
+    setMinimumWidth(1250); // Establecer el ancho mínimo de la ventana
+    setMinimumHeight(600); // Establecer el ancho mínimo de la ventana
 
-// Configuración del diseño horizontal para organizar los elementos de entrada y etiquetas
-QHBoxLayout* inputRowLayout = new QHBoxLayout();
+    // Configuración del diseño principal
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
-// Configuración del diseño horizontal para organizar los botones
-QHBoxLayout* buttonRowLayout = new QHBoxLayout();
+    // Configuración del diseño horizontal para organizar los elementos de entrada y etiquetas
+    QHBoxLayout* inputRowLayout = new QHBoxLayout();
 
+    // Configuración del diseño horizontal para organizar los botones
+    QHBoxLayout* buttonRowLayout = new QHBoxLayout();
 
-// Configuración del diseño horizontal para mostrar cadena de construcción
-QHBoxLayout* outputStringRowLayout = new QHBoxLayout();
+    // Configuración del diseño horizontal para mostrar cadena de construcción
+    QHBoxLayout* outputStringRowLayout = new QHBoxLayout();
 
-// Configuración de las etiquetas
-QLabel* labelRegex = new QLabel("Regex:");
-QLabel* labelPosfix = new QLabel("Posfix:");
+    // Configuración de las etiquetas
+    QLabel* labelRegex = new QLabel("Regex:");
+    QLabel* labelPosfix = new QLabel("Posfix:");
 
-// Configuraciónm de QLineEdit
-inputRegex.setParent(this);
-outputPostfix.setReadOnly(true); // Hacer que el QLineEdit sea no editable
-outputConstructionFSM.setParent(this);
+    // Configuración de QLineEdit
+    inputRegex.setParent(this);
+    outputPostfix.setReadOnly(true); // Hacer que el QLineEdit sea no editable
+    outputConstructionFSM.setParent(this);
 
-// Configuración de los botones
-buttonRandomRegex.setText("Generate Random Regex");
-buttonGenerateNFA.setText("Generate NFA");
-buttonGenerateDFA.setText("Generate DFA");
-buttonDrawFSM.setText("Draw FSM");
+    // Configuración de los botones
+    buttonRandomRegex.setText("Generate Random Regex");
+    buttonGenerateNFA.setText("Generate NFA");
+    buttonGenerateDFA.setText("Generate DFA");
+    buttonDrawFSM.setText("Draw FSM");
 
-// Agregar elementos de entrada y etiquetas al diseño horizontal
-inputRowLayout->addWidget(labelRegex);
-inputRowLayout->addWidget(&inputRegex);
-inputRowLayout->addWidget(labelPosfix);
-inputRowLayout->addWidget(&outputPostfix);
-inputRowLayout->addWidget(&buttonRandomRegex);
+    // Agregar elementos de entrada y etiquetas al diseño horizontal
+    inputRowLayout->addWidget(labelRegex);
+    inputRowLayout->addWidget(&inputRegex);
+    inputRowLayout->addWidget(labelPosfix);
+    inputRowLayout->addWidget(&outputPostfix);
+    inputRowLayout->addWidget(&buttonRandomRegex);
 
-// Agregar botones al diseño horizontal
+    // Agregar botones al diseño horizontal
+    buttonRowLayout->addWidget(&buttonGenerateNFA);
+    buttonRowLayout->addWidget(&buttonGenerateDFA);
+    buttonRowLayout->addWidget(&buttonDrawFSM);
 
-buttonRowLayout->addWidget(&buttonGenerateNFA);
-buttonRowLayout->addWidget(&buttonGenerateDFA);
-buttonRowLayout->addWidget(&buttonDrawFSM);
+    // Agregar zona impresión
+    outputStringRowLayout->addWidget(&outputConstructionFSM);
 
-//Agregar zona impresión
-outputStringRowLayout->addWidget(&outputConstructionFSM);
+    // Añadir los diseños horizontales al diseño principal
+    mainLayout->addLayout(inputRowLayout);
+    mainLayout->addLayout(buttonRowLayout);
+    mainLayout->addLayout(outputStringRowLayout);
 
-// Agregar los diseños horizontales al diseño principal
-mainLayout->addLayout(inputRowLayout);
-mainLayout->addLayout(buttonRowLayout);
-mainLayout->addLayout(outputStringRowLayout);
+    // Añadir espaciador vertical para empujar todo hacia arriba
+    mainLayout->addStretch(1);
 
-// Establecer el diseño en la ventana principal
-setLayout(mainLayout);
-
+    // Establecer el diseño en la ventana principal
+    setLayout(mainLayout);
 
         // Conectar los botones a las funciones correspondientes
         connect(&buttonGenerateNFA, &QPushButton::clicked, this, &MainWindow::GenerateRNFA);
-
-
+        connect(&buttonRandomRegex, &QPushButton::clicked, this, &MainWindow::GenerateREGEX);
+        connect(&buttonDrawFSM, &QPushButton::clicked, this, &MainWindow::DibujarNFA);
         // Inicializar el color para los estados finales
         finalStateColor = Qt::magenta; // Color magenta para los estados finales
     }
+    void DibujarNFA(){
+    QString text = outputConstructionFSM.text();
+    limpiarDatos(text);
+            update();
+    }
+    // Función para limpiar los datos existentes
+void limpiarDatos(const QString qString) {
+   
+  // Limpiar los datos existentes
+        activeMethod = 0;
+        states.clear();
+        transitions.clear();
+        finalStates.clear(); // Limpiar los estados finales
 
+
+    // Procesar el texto para construir el NFA
+    QStringList lines = qString.split("\n");
+
+    QString section;
+    for (const QString &line : lines) {
+        if (line.startsWith("#")) {
+            section = line;
+            continue;
+        }
+        if (section == "#states") {
+            states.append(line);
+        } else if (section == "#initial") {
+            QStringList initialStates = line.split(",");
+            for (const QString &state : initialStates) {
+                states.append(state);
+            }
+        } else if (section == "#accepting") {
+            QStringList acceptingStates = line.split(",");
+            for (const QString &state : acceptingStates) {
+                states.append(state);
+                finalStates.insert(state); // Guardar los estados finales
+            }
+        } else if (section == "#alphabet") {
+        } else if (section == "#transitions") {
+            transitions.append(line);
+        }
+    }
+}
+
+void GenerateREGEX(){
+ // Obtener una semilla única basada en el tiempo actual
+    srand(time(nullptr));
+	QString randomRegex = QString::fromStdString(generarExpresionRegularAleatoria(5));
+inputRegex.setText(randomRegex);
+}
     void GenerateRNFA() {
         QString input = inputRegex.text(); // Obtener el texto del QLineEdit
         QString qString = inputRegex.text(); // Obtener el texto del QLineEdit
 
  try {
-   string regex=input.toStdString();
+ string regex = input.toStdString();
 
-    if (!validateRegex(regex)) {
-        cout << "Expresion regular invalida." << endl;
-        //return 1;
-    }
+if (!validateRegex(regex)) {
+    // Mostrar mensaje de error con QMessageBox
+    QMessageBox::warning(this, "Expresión Regular Inválida", "La expresión regular ingresada es inválida.");
+
+    // Borrar el texto de inputRegex
+    inputRegex.clear();
+
+    // Salir de la función o realizar otras acciones según sea necesario
+    return;
+}
 
     POSTFIX postfix(regex);
     cout << "------------------------------------------------------------" << endl;
     cout << "regex: " << regex << endl;
     cout << "------------------------------------------------------------" << endl;
+    
     cout << "postfix: " << postfix.get_postfix() << endl;
     cout << "------------------------------------------------------------" << endl;
+QString postfixString = QString::fromStdString(postfix.get_postfix());
+outputPostfix.setText(postfixString);
 
     NFA nfa = postfix2nfa(postfix.get_postfix());
         std::map<std::string, std::map<std::string, std::string>> dict = nfa.toDict();
@@ -208,14 +267,23 @@ setLayout(mainLayout);
     output << "#accepting" << std::endl;
     output << nfa.accept->label << std::endl;
 
-    // Imprimir alfabeto
-    output << "#alphabet" << std::endl;
-    std::vector<std::string> alphabet = nfa.getSymbols();
-    for (auto symbol : alphabet) {
-        if (!symbol.empty()) { // Ignorar el carácter nulo
-            output << symbol << std::endl;
+  // Imprimir alfabeto
+output << "#alphabet" << std::endl;
+std::vector<std::string> alphabet = nfa.getSymbols();
+bool hasEpsilon = false; // Variable para verificar si ya se ha incluido epsilon en el alfabeto
+for (auto symbol : alphabet) {
+    if (!symbol.empty()) { // Ignorar el carácter nulo
+        output << symbol << std::endl;
+        if (symbol == "ε") {
+            hasEpsilon = true;
         }
     }
+}
+
+// Si "ε" no está en el alfabeto, añadirlo
+if (!hasEpsilon) {
+    output << "ε" << std::endl;
+}
 
    // Imprimir transiciones
     output << "#transitions" << std::endl;
@@ -247,46 +315,16 @@ if (lastEndlPos != std::string::npos) {
 
     //std::cout << outputString << std::endl;
     qString = QString::fromStdString(outputString);
+outputConstructionFSM.setText(qString);
 
+        limpiarDatos(qString);
 
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         std::cerr << "Your Regex may be invalid" << std::endl;
     }
 	    std::cout << qString.toStdString() << std::endl;
-        // Limpiar los datos existentes
-        activeMethod = 0;
-        states.clear();
-        transitions.clear();
-        finalStates.clear(); // Limpiar los estados finales
-
-        // Procesar el texto para construir el NFA
-        QStringList lines = qString.split("\n");
-        
-        QString section;
-        for (const QString &line : lines) {
-            if (line.startsWith("#")) {
-                section = line;
-                continue;
-            }
-            if (section == "#states") {
-                states.append(line);
-            } else if (section == "#initial") {
-                QStringList initialStates = line.split(",");
-                for (const QString &state : initialStates) {
-                    states.append(state);
-                }
-            } else if (section == "#accepting") {
-                QStringList acceptingStates = line.split(",");
-                for (const QString &state : acceptingStates) {
-                    states.append(state);
-                    finalStates.insert(state); // Guardar los estados finales
-                }
-            } else if (section == "#alphabet") {
-            } else if (section == "#transitions") {
-                transitions.append(line);
-            }
-        }
+     
         update();
     }
 
@@ -297,7 +335,7 @@ protected:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing, true);
         qreal x = -100; // coordenada x de inicio
-    qreal y = 250; // coordenada y de inicio
+    qreal y = 100; // coordenada y de inicio
         switch (activeMethod)
         {
         case 0:
