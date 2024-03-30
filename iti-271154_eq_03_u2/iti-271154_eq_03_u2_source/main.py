@@ -1,120 +1,215 @@
-from postfix2nfa import NFA
-from nfa2dfa import DFA
-from regex2postfix import POSTFIX, validateRegex
+from collections import deque
 
-def reformat_dfa(dfa):
-    # Verificar si los nombres de los estados son largos
-    is_long_state = False
-    for state in dfa.keys():
-        if state != 'startingState' and ' ' in state:
-            is_long_state = True
+class DFA:
+
+    def __init__(self, nfa):
+        self.nfa = nfa
+        self.states = self.nfa2dfa(nfa)
+
+    
+    # Funciones de utilidad
+    def getStateByLabel(self, label):
+        return self.nfa.getStateByLabel(label)
+    
+    def getStatesByLabel(self, labels):
+        return self.nfa.getStatesByLabel(labels)
+    
+    def getSymbols(self):
+        return self.nfa.getSymbols() - {'ε'}  # Excluimos ε del alfabeto
+    
+    # Funciones DFA
+    def epsilonClosure(self, states):
+        closure = set(states)
+        stack = list(states)
+        while stack:
+            state = stack.pop()
+            for symbol, next_state in state.transitions:
+                if next_state not in closure:
+                    if symbol == "ε":
+                        closure.add(next_state)
+                        stack.append(next_state)
+        closureList =  list(closure)
+        closureList.sort(key=lambda x: x.label)
+        closureString = ''
+        for state in closureList:
+            closureString += ' ' + state.label
+        return closureString[1:]
+    
+    def move(self, nfa, states, symbol):
+        move_states = set()
+        statesList = states.split()
+        states = []
+        for label in statesList:
+            states.append(nfa.getStateByLabel(label))
+        for state in states:
+            for s, next_state in state.transitions:
+                if s == symbol:
+                    move_states.add(next_state)
+        return move_states
+    
+    # Conversión de NFA a DFA
+    def nfa2dfa(self, nfa):
+        nfaStates = nfa.getStates()
+        symbols = nfa.getSymbols()
+        start_state = self.epsilonClosure([nfaStates[0]])
+        dfa_states = {'startingState': start_state}
+        queue = deque([start_state])
+        seen = set([start_state])
+        while queue:
+            current_state = queue.popleft()
+            for symbol in symbols:
+                if symbol == 'ε':  # Excluimos ε del proceso de construcción del DFA
+                    continue
+                next_states = self.epsilonClosure(self.move(nfa, current_state, symbol))
+                if next_states == '' or next_states == ' ':
+                    continue
+                if next_states not in seen:
+                    queue.append(next_states)
+                    seen.add(next_states)
+                    terminating = nfa.checkIfAcceptingState(nfa.getStatesByLabel(next_states.split()))
+                    dfa_states.setdefault(current_state, {})[symbol] = next_states
+                    if terminating:
+                        dfa_states.setdefault(next_states, {})['isTerminatingState'] = True
+        return dfa_states
+
+# Clase de ejemplo para NFA
+class NFA:
+    def __init__(self):
+        self.states = [State('S0'), State('S1'), State('S2'), State('S3'), State('S4'), State('S5')]
+        self.states[0].transitions = [('a', self.states[1])]
+        self.states[1].transitions = [('ε', self.states[2]), ('ε', self.states[3])]
+        self.states[2].transitions = [('ε', self.states[0])]
+        self.states[3].transitions = [('ε', self.states[4])]
+        self.states[4].transitions = [('b', self.states[5])]
+        self.initial_state = self.states[2]
+        self.accepting_states = {self.states[5]}
+        self.alphabet = {'a', 'b', 'ε'}
+
+    def getStates(self):
+        return self.states
+    
+    def getStateByLabel(self, label):
+        for state in self.states:
+            if state.label == label:
+                return state
+        return None
+    
+    def getStatesByLabel(self, labels):
+        states = []
+        for label in labels:
+            states.append(self.getStateByLabel(label))
+        return states
+    
+    def getSymbols(self):
+        return self.alphabet
+    
+    def checkIfAcceptingState(self, states):
+        for state in states:
+            if state in self.accepting_states:
+                return True
+        return False
+
+class State:
+    def __init__(self, label):
+        self.label = label
+        self.transitions = []
+
+def generate_dfa_string(dfa):
+    dfa_string = ""
+    
+    dfa_string += "#states\n"
+    for state in dfa.states:
+        if state != 'startingState' and not state.endswith('TERMINATINGSTATE'):
+            dfa_string += state + "\n"
+    
+    dfa_string += "#initial\n"
+    dfa_string += dfa.states['startingState'] + "\n"
+    
+    dfa_string += "#accepting\n"
+    for state, info in dfa.states.items():
+        if 'isTerminatingState' in info:
+            dfa_string += state + "\n"
+    
+    dfa_string += "#alphabet\n"
+    for symbol in dfa.getSymbols():
+        dfa_string += symbol + "\n"
+    
+    dfa_string += "#transitions\n"
+    for state, transitions in dfa.states.items():
+        if state == 'startingState':
+            continue
+        for symbol, next_state in transitions.items():
+            if not isinstance(next_state, bool):  # Excluir entradas tipo 'isTerminatingState'
+                dfa_string += f"{state}:{symbol}>{next_state}\n"
+    
+    return dfa_string
+
+def convertir_formato(cadena):
+    lineas = cadena.split('\n')
+    
+    nuevos_estados = set()
+    nuevos_iniciales = set()
+    nuevos_aceptados = set()
+    nuevas_transiciones = []
+
+    
+    for linea in lineas:
+        if linea.startswith('#states'):
+            estados_leidos = True
+            continue
+        if estados_leidos and not linea.startswith('#initial'):
+            estado_acortado = linea.split()[0]
+            #print(estado_acortado)
+            if estado_acortado not in nuevos_estados:
+                nuevos_estados.add(estado_acortado + '\n')  # Agregamos un salto de línea al final del estado
+        else:
             break
 
-    # Si los nombres de los estados son largos, renombrarlos
-    if is_long_state:
-        print("RENOMBRADOS:")
-        state_mapping = {}
-        renamed_dfa = {}    
-        threshold = 3  # Umbral de longitud para renombrar estados
-        starting_state = dfa['startingState']
-        if ' ' in starting_state:
-            new_starting_state = starting_state.split()[0]  # Tomar solo la parte antes del primer espacio
-            state_mapping[starting_state] = new_starting_state
-            renamed_dfa[new_starting_state] = dfa[starting_state]
-        else:
-            renamed_dfa[starting_state] = dfa[starting_state]
-
-        for state, transitions_data in dfa.items():
-            if state != 'startingState' and state != starting_state:
-                state_parts = state.split()
-                if len(state_parts) > 1:
-                    # Tomar solo la parte antes del primer espacio
-                    new_state = state_parts[0]
-                    state_mapping[state] = new_state
-                    renamed_dfa[new_state] = transitions_data
-                else:
-                    renamed_dfa[state] = transitions_data
-
-        # Actualiza las transiciones para usar los nuevos nombres de estado
-        for state, transitions_data in renamed_dfa.items():
-            if isinstance(transitions_data, dict):
-                updated_transitions = {}
-                for symbol, target_state in transitions_data.items():
-                    if isinstance(target_state, str) and target_state in state_mapping:
-                        updated_transitions[symbol] = state_mapping[target_state]
+    for linea in lineas:
+        if linea.startswith('#initial'):
+            nuevos_iniciales = {estado.split()[0] for estado in lineas[lineas.index(linea) + 1].split()}
+        elif linea.startswith('#accepting'):
+            nuevos_aceptados = {estado.split()[0] for estado in lineas[lineas.index(linea) + 1].split()}
+        elif linea.startswith('#transitions'):
+            transiciones = lineas[lineas.index(linea) + 1:]
+            for transicion in transiciones:
+                if transicion:
+                    partes = transicion.split(':')
+                    estado_origen = partes[0]
+                    trans = partes[1].split('>')[0]
+                    estado_destino = partes[1].split('>')[1]
+                    if len(estado_origen.split()) > 1:
+                        nuevo_estado_origen = estado_origen.split()[0]
                     else:
-                        updated_transitions[symbol] = target_state
-                renamed_dfa[state] = updated_transitions
+                        nuevo_estado_origen = estado_origen
+                    if len(estado_destino.split()) > 1:
+                        nuevo_estado_destino = estado_destino.split()[0]
+                    else:
+                        nuevo_estado_destino = estado_destino
+                    nuevas_transiciones.append(f"{nuevo_estado_origen}:{trans}>{nuevo_estado_destino}")
 
-        renamed_dfa['startingState'] = state_mapping.get(starting_state, starting_state)
+    nuevo_formato = ""
+    nuevo_formato += "#states\n"
+    nuevo_formato += "".join(nuevos_estados)  # Unimos los estados sin espacios entre ellos
+    nuevo_formato += "#initial\n"
+    nuevo_formato += " ".join(nuevos_iniciales) + "\n"
+    nuevo_formato += "#accepting\n"
+    nuevo_formato += " ".join(nuevos_aceptados) + "\n"
+    nuevo_formato += "#alphabet\n"
+    nuevo_formato += "a\nb\n"
+    nuevo_formato += "#transitions\n"
+    nuevo_formato += "\n".join(nuevas_transiciones)
 
-        print('REMOBRADA',renamed_dfa)
-        return renamed_dfa
-    else:
-        print("NO RENOMBRADOS")
-        return dfa
-
-
-
-
-
-
-def convert_to_desired_format(nfa_dict):
-    nfa_dict = reformat_dfa(nfa_dict)
-    states = [state for state in nfa_dict.keys() if state != 'startingState']  # Obtenemos la lista de estados excluyendo el estado inicial
-    initial_state = nfa_dict['startingState']  # Estado inicial
-    accepting_states = [state for state, data in nfa_dict.items() if isinstance(data, dict) and data.get('isTerminatingState', False)]  # Estados de aceptación
-    alphabet = set()
-    transitions = []
-
-    # Obtenemos el alfabeto y las transiciones
-    for state, transitions_data in nfa_dict.items():
-        if isinstance(transitions_data, dict):
-            for symbol, target_state in transitions_data.items():
-                if symbol != 'isTerminatingState':
-                    alphabet.add(symbol)
-                    transitions.append(f"{state}:{symbol}>{target_state}")
-
-    # Convertimos todo a strings y los ordenamos
-    states_str = '\n'.join(states)
-    accepting_states_str = '\n'.join(accepting_states)
-    alphabet_str = '\n'.join(sorted(list(alphabet)))
-    transitions_str = '\n'.join(sorted(transitions))
-
-    return f"#states\n{states_str}\n#initial\n{initial_state}\n#accepting\n{accepting_states_str}\n#alphabet\n{alphabet_str}\n#transitions\n{transitions_str}"
+    return nuevo_formato
 
 def main():
-#Cases: d(d*(b+a)+c), (a*b), (a*b)*, (a+b), b*b+da
-    cases = {0: '(a+b)'}
-    regex = cases[0]
-
-    # regex = input("Enter regular expression: ")
-    if not validateRegex(regex):
-        return
-    try:
-        postfix = POSTFIX(regex)
-        print("----------------------------------------------------------------")
-        print("regex:", regex)
-        print("----------------------------------------------------------------")
-        print("postfix: ", postfix.get_postfix())
-        print("----------------------------------------------------------------")
-        nfa = NFA(postfix=postfix.get_postfix())
-        print("NFA: ", nfa.toDict())
-        nfa.visualize(name='output/nfa.gv', view=False)
-        print("----------------------------------------------------------------")
-        dfa = DFA(nfa)
-        print("DFA: ", dfa.toDict())
-        dfa.visualize(name='output/dfa.gv', view=False)
-        print("----------------------------------------------------------------")
-        construct_dfa = convert_to_desired_format(dfa.toDict())
-        print(f"Structure NFA: \n{convert_to_desired_format(nfa.toDict())}")
-        print(f"Structure DFA: \n{construct_dfa}")
-      
-    # catch the exception and print it
-    except Exception as e:
-        print(e)
-        print("Your Regex may be invalid")
+    nfa = NFA()
+    dfa = DFA(nfa)
+    
+    dfa_string = generate_dfa_string(dfa)
+    print(convertir_formato(dfa_string))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
+
