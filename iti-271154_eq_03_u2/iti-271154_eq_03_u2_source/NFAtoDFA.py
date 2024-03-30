@@ -197,8 +197,11 @@ def convertir_formato(cadena):
     nuevos_estados = set()
     nuevos_iniciales = set()
     nuevos_aceptados = set()
+    alfabeto = set()
+
     nuevas_transiciones = []
     aceptaciones_leidos=False
+    alf_leidos=False
     
     for linea in lineas:
         if linea.startswith('#states'):
@@ -226,10 +229,20 @@ def convertir_formato(cadena):
             continue
         if aceptaciones_leidos and linea.startswith('#alphabet'):
             break
-        elif aceptaciones_leidos and not linea.startswith('#transitions'):
+        elif aceptaciones_leidos and not linea.startswith('#alphabet'):
             aceptacion_cortado = linea.split()[0]
+            print("AQUI-", aceptacion_cortado)
             if aceptacion_cortado not in nuevos_aceptados:
-                nuevos_aceptados.add(aceptacion_cortado)  # Agregamos un salto de línea al final del estado
+                nuevos_aceptados.add(aceptacion_cortado + '\n')
+
+    for linea in lineas:
+        if linea.startswith('#alphabet'):
+            alf_leidos = True
+            continue
+        if alf_leidos and linea.startswith('#transitions'):
+            break
+        elif alf_leidos and not linea.startswith('#transitions'):
+            alfabeto.add(linea + '\n') 
 
     for linea in lineas:
         if linea.startswith('#transitions'):
@@ -256,9 +269,9 @@ def convertir_formato(cadena):
     nuevo_formato += "#initial\n"
     nuevo_formato += ""+nuevos_iniciales+ "\n"
     nuevo_formato += "#accepting\n"
-    nuevo_formato += " ".join(nuevos_aceptados) + "\n"
+    nuevo_formato += "".join(nuevos_aceptados)
     nuevo_formato += "#alphabet\n"
-    nuevo_formato += "a\nb\n"
+    nuevo_formato += "".join(alfabeto) 
     nuevo_formato += "#transitions\n"
     nuevo_formato += "\n".join(nuevas_transiciones)
 
