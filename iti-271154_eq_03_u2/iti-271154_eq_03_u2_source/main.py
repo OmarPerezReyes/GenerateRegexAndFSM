@@ -74,16 +74,62 @@ class DFA:
 
 # Clase de ejemplo para NFA
 class NFA:
-    def __init__(self):
-        self.states = [State('S0'), State('S1'), State('S2'), State('S3'), State('S4'), State('S5')]
-        self.states[0].transitions = [('a', self.states[1])]
-        self.states[1].transitions = [('ε', self.states[2]), ('ε', self.states[3])]
-        self.states[2].transitions = [('ε', self.states[0])]
-        self.states[3].transitions = [('ε', self.states[4])]
-        self.states[4].transitions = [('b', self.states[5])]
-        self.initial_state = self.states[2]
-        self.accepting_states = {self.states[5]}
-        self.alphabet = {'a', 'b', 'ε'}
+    def __init__(self, entrada):
+        self.states = []
+        self.initial_state = None
+        self.accepting_states = set()
+        self.alphabet = set()
+       
+        lineas = entrada.strip().split('\n')
+
+        for linea in lineas:
+            if linea.startswith('#states'):
+                section = 1
+                continue
+            if section ==1:
+                if linea.startswith('#'):
+                    section =2
+                    continue
+                #GUARDAR ESTADOS
+                self.states.append(State(linea))
+            if section ==2:
+                if linea.startswith('#'):
+                    section =3
+                    continue
+                for i, value in enumerate(self.states):
+                    #print(linea, value.label)
+                    if linea == value.label:
+                        #GUARDAR ESTADO INICIAL
+                        self.initial_state = self.states[i]
+            if section ==3:
+                if linea.startswith('#'):
+                    section =4
+                    continue
+                for i, value in enumerate(self.states):
+                    #print(linea, value.label)
+                    if linea == value.label:
+                        #GUARDAR ESTADO ACEPTACIÓN
+                        self.accepting_states.add(self.states[i])
+            if section ==4:
+                if linea.startswith('#'):
+                    section =5
+                    continue
+                #GUARDAR ALFABETO
+                self.alphabet.add(linea)
+            if section ==5:
+                if linea.startswith('#'):
+                    break
+                partes = linea.strip().split(':')
+                source = partes[0]
+                symbol, destination = partes[1].split('>')
+                #print(source,symbol,destination)
+                for i, value in enumerate(self.states):
+                    #self.states[4].transitions = [('b', self.states[5])]
+                    if source == value.label:
+                        #GUARDAR TRANSICIONES
+                        for j, valuee in enumerate(self.states):
+                            if destination == valuee.label:
+                                self.states[i].transitions.append((symbol, self.states[j]))
 
     def getStates(self):
         return self.states
@@ -166,8 +212,11 @@ def convertir_formato(cadena):
             break
 
     for linea in lineas:
+
         if linea.startswith('#initial'):
-            nuevos_iniciales = {estado.split()[0] for estado in lineas[lineas.index(linea) + 1].split()}
+            siguiente_linea = lineas[lineas.index(linea) + 1]
+            nuevos_iniciales = siguiente_linea.split()[0]
+            #print("aqui", nuevos_iniciales)
         elif linea.startswith('#accepting'):
             nuevos_aceptados = {estado.split()[0] for estado in lineas[lineas.index(linea) + 1].split()}
         elif linea.startswith('#transitions'):
@@ -192,7 +241,7 @@ def convertir_formato(cadena):
     nuevo_formato += "#states\n"
     nuevo_formato += "".join(nuevos_estados)  # Unimos los estados sin espacios entre ellos
     nuevo_formato += "#initial\n"
-    nuevo_formato += " ".join(nuevos_iniciales) + "\n"
+    nuevo_formato += ""+nuevos_iniciales+ "\n"
     nuevo_formato += "#accepting\n"
     nuevo_formato += " ".join(nuevos_aceptados) + "\n"
     nuevo_formato += "#alphabet\n"
@@ -203,10 +252,36 @@ def convertir_formato(cadena):
     return nuevo_formato
 
 def main():
-    nfa = NFA()
+    entrada = """
+#states
+#states
+S0
+S1
+S2
+S3
+S4
+S5
+#initial
+S2
+#accepting
+S5
+#alphabet
+a
+b
+ε
+#transitions
+S0:a>S1
+S1:ε>S2
+S1:ε>S3
+S2:ε>S0
+S3:ε>S4
+S4:b>S5
+"""
+    nfa = NFA(entrada)
     dfa = DFA(nfa)
     
     dfa_string = generate_dfa_string(dfa)
+    #print(dfa_string)
     print(convertir_formato(dfa_string))
 
 
