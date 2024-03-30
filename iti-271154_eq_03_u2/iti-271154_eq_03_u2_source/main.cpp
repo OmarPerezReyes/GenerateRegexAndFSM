@@ -31,7 +31,21 @@
 #include <set>
 #include "NFA.h"
 #include "POSTFIX.h"
+#include <cstdio>
+#include <memory>
 using namespace std;
+
+std::string execute_command(const char* command) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::shared_ptr<FILE> pipe(popen(command, "r"), pclose);
+    if (!pipe) throw std::runtime_error("popen() failed!");
+    while (!feof(pipe.get())) {
+        if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+            result += buffer.data();
+    }
+    return result;
+}
 
 NFA postfix2nfa(std::string postfix) {
     std::vector<NFA> nfaStack;
@@ -161,16 +175,22 @@ public:
 
         // Conectar los botones a las funciones correspondientes
         connect(&buttonGenerateNFA, &QPushButton::clicked, this, &MainWindow::GenerateRNFA);
+connect(&buttonGenerateDFA, &QPushButton::clicked, this, [=]() {
+    int parametro = 1; // Por ejemplo, el valor 42 como parámetro
+    GenerateRNFA(parametro);
+});
         connect(&buttonRandomRegex, &QPushButton::clicked, this, &MainWindow::GenerateREGEX);
         connect(&buttonDrawFSM, &QPushButton::clicked, this, &MainWindow::DibujarNFA);
         // Inicializar el color para los estados finales
         finalStateColor = Qt::magenta; // Color magenta para los estados finales
     }
+
     void DibujarNFA(){
     QString text = outputConstructionFSM.text();
     limpiarDatos(text);
             update();
     }
+
     // Función para limpiar los datos existentes
 void limpiarDatos(const QString qString) {
    
@@ -216,7 +236,7 @@ void GenerateREGEX(){
 	QString randomRegex = QString::fromStdString(generarExpresionRegularAleatoria(5));
 inputRegex.setText(randomRegex);
 }
-    void GenerateRNFA() {
+void GenerateRNFA(int type = 0) {
         QString input = inputRegex.text(); // Obtener el texto del QLineEdit
         QString qString = inputRegex.text(); // Obtener el texto del QLineEdit
 
@@ -246,7 +266,15 @@ outputPostfix.setText(postfixString);
 
     NFA nfa = postfix2nfa(postfix.get_postfix());
         std::map<std::string, std::map<std::string, std::string>> dict = nfa.toDict();
-        
+
+// Imprimir el diccionario
+std::cout << "Dictionary:" << std::endl;
+for (const auto& pair : dict) {
+    std::cout << pair.first << ":" << std::endl;
+    for (const auto& transition : pair.second) {
+        std::cout << "  " << transition.first << " -> " << transition.second << std::endl;
+    }
+}
         //nfa2dfa(nfa);                                                                   // Convertir NFA a DFA
     std::stringstream output; // Aquí se guardará la salida
 // Imprimir estados
@@ -314,8 +342,30 @@ if (lastEndlPos != std::string::npos) {
 
 
     //std::cout << outputString << std::endl;
+    if (type==0)
+    {
     qString = QString::fromStdString(outputString);
-outputConstructionFSM.setText(qString);
+    }
+    else{
+            // Definición del comando a ejecutar
+    std::string command = "python3 NFAtoDFA.py \"" + outputString + "\"";
+    std::string processed_string = execute_command(command.c_str());
+    std::cout << "Cadena procesada por Python: " << processed_string << std::endl;
+    size_t lastEndlPos = processed_string.find_last_of("\n");
+
+// Truncar la cadena hasta la posición del último endl
+if (lastEndlPos != std::string::npos) {
+    processed_string = processed_string.substr(0, lastEndlPos);
+}
+
+
+    qString = QString::fromStdString(processed_string);
+       
+// Ejecución del comando
+system(command.c_str());
+
+    }    
+     outputConstructionFSM.setText(qString);
 
         limpiarDatos(qString);
 
