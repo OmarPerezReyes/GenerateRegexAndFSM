@@ -1,5 +1,8 @@
 #include <iostream>
 #include <stack>
+#include <string>
+
+#include <random>
 #include <map>
 #include <regex>
 
@@ -88,12 +91,91 @@ for (size_t i = 0; i < regex.length() - 1; ++i) {
     }
 };
 
+// Función para validar una expresión regular según las restricciones especificadas
 bool validateRegex(const std::string& regex) {
+    // Verificar si la expresión regular contiene el símbolo '$'
+    if (regex.find('$') != std::string::npos) {
+        std::cout << "La expresión regular no puede contener el símbolo '$'." << std::endl;
+        return false;
+    }
+
+    // Verificar si la expresión regular contiene solo un carácter que no sea número o letra
+    if (regex.size() == 1 && !std::isalnum(regex[0])) {
+        std::cout << "La expresión regular no puede contener solo un carácter que no sea número o letra." << std::endl;
+        return false;
+    }
+
+    // Verificar si la expresión regular contiene los caracteres '*' y '+' juntos
+    if (regex.find("*+") != std::string::npos || regex.find("+*") != std::string::npos) {
+        std::cout << "La expresión regular no puede contener '*' y '+' juntos." << std::endl;
+        return false;
+    }
+
+    // Verificar si la expresión regular contiene solo '*' o solo '+'
+    if (regex == "*" || regex == "+") {
+        std::cout << "La expresión regular no puede contener solo '*' o solo '+'." << std::endl;
+        return false;
+    }
+
+    // Verificar si la expresión regular contiene '*+' o '+*'
+    if (regex.find("*+") != std::string::npos || regex.find("+*") != std::string::npos) {
+        std::cout << "La expresión regular no puede contener '*+' o '+*'." << std::endl;
+        return false;
+    }
+
     try {
         std::regex re(regex);
     } catch (const std::regex_error&) {
-        std::cout << "Invalid regular expression: " << regex << std::endl;
+        std::cout << "Expresión regular inválida: " << regex << std::endl;
         return false;
     }
     return true;
 }
+
+// Función para generar una cadena aleatoria de longitud especificada y caracteres dados
+std::string generarCadenaAleatoria(int longitud, const std::string& caracteres) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, caracteres.size() - 1);
+    std::string resultado;
+    for (int i = 0; i < longitud; ++i) {
+        resultado += caracteres[dis(gen)];
+    }
+    return resultado;
+}
+
+std::string generarExpresionRegularAleatoria(int longitud) {
+
+    // Define los caracteres permitidos en la expresión regular
+    std::string caracteres = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    // Patrones iniciales válidos con letras comodín
+    std::vector<std::string> patronesValidos = {
+        "d*(a)",       // d seguido de cualquier letra
+        "(a+d)*",      // Cualquier letra seguida de d
+        "(a|d)*",      // Cualquier letra alternada con d
+        "a+(d|b)",     // Una o más letras seguidas de d o b
+        "(b|d)*a+"     // d o b seguidos de una o más letras
+    };
+
+    // Inicializa la semilla para la generación de números aleatorios
+    std::srand(std::time(nullptr));
+
+    // Selecciona un patrón inicial al azar
+    std::string regex = patronesValidos[rand() % patronesValidos.size()];
+
+    // Agrega caracteres aleatorios para completar la longitud deseada
+    while (regex.length() < static_cast<std::string::size_type>(longitud)) {
+        regex += caracteres[rand() % caracteres.size()];
+    }
+
+    // Valida la expresión regular generada
+    if (!validateRegex(regex)) {
+        // Si la expresión regular no es válida, se vuelve a intentar
+            srand(time(nullptr));
+        return generarExpresionRegularAleatoria(longitud);
+    }
+
+    return regex;
+}
+
