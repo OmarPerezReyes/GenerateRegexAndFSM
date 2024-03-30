@@ -1,184 +1,172 @@
-#include "DFA.h"
-#include <fstream>
-#include <bitset>
-#include <vector>
+#include <iostream>
 #include <queue>
 #include <set>
-#include <algorithm>
+#include <map>
+#include <sstream>
+#include "NFA.h"
+#include "DFA.h"
 
-// Definición de constantes y variables globales
-#define MAX_NFA_STATES 10
-#define MAX_ALPHABET_SIZE 10
-int D=0; // Número de estados del DFA
-int F; // Número de estados finales del NFA
-int T; // Número de transiciones en el NFA
-using namespace std;
-
-// Representación de un estado NFA
-class NFAstate {
-public:
-    int transitions[MAX_ALPHABET_SIZE][MAX_NFA_STATES];
-    NFAstate() {
-        for (int i = 0; i < MAX_ALPHABET_SIZE; i++)
-            for (int j = 0; j < MAX_NFA_STATES; j++)
-                transitions[i][j] = -1;
-    }
-};
-
-// Representación de un estado DFA
-struct DFAstate {
-    bool finalState;
-    bitset<MAX_NFA_STATES> constituentNFAstates;
-    bitset<MAX_NFA_STATES> transitions[MAX_ALPHABET_SIZE];
-    int symbolicTransitions[MAX_ALPHABET_SIZE];
-};
-
-// Variables globales
-set<int> NFA_finalStates;
-vector<int> DFA_finalStates;
-vector<DFAstate*> DFAstates;
-queue<int> incompleteDFAstates;
-int N, M; // N -> No. de estados, M -> Tamaño del alfabeto de entrada
-NFAstate* NFAstates;
-
-// Función para encontrar el cierre epsilon del estado NFA "state" y almacenarlo en "closure"
-void epsilonClosure(int state, bitset<MAX_NFA_STATES>& closure) {
-    for (int i = 0; i < N && NFAstates[state].transitions[0][i] != -1; i++) {
-        if (closure[NFAstates[state].transitions[0][i]] == 0) {
-            closure[NFAstates[state].transitions[0][i]] = 1;
-            epsilonClosure(NFAstates[state].transitions[0][i], closure);
-        }
-    }
+DFA::DFA(NFA nfa) : nfa(nfa) {
+    constructDFA();
 }
 
-// Función para encontrar el cierre epsilon de un conjunto de estados NFA "state" y almacenarlo en "closure"
-void epsilonClosure(bitset<MAX_NFA_STATES> state, bitset<MAX_NFA_STATES>& closure) {
-    for (int i = 0; i < N; i++) {
-        if (state[i] == 1) {
-            epsilonClosure(i, closure);
-        }
-    }
-}
+std::map<std::string, std::map<std::string, std::string>> DFA::toDict() {
+    std::map<std::string, std::map<std::string, std::string>> dict;
 
-// Función para devolver un bitset representando el conjunto de estados en los que el NFA podría estar después de moverse
-// desde el estado X en el símbolo de entrada A
-void NFAmove(int X, int A, bitset<MAX_NFA_STATES>& Y) {
-    for (int i = 0; i < N && NFAstates[X].transitions[A][i] != -1; i++) {
-        Y[NFAstates[X].transitions[A][i]] = 1;
-    }
-}
-
-// Función para devolver un bitset representando el conjunto de estados en los que el NFA podría estar después de moverse
-// desde el conjunto de estados X en el símbolo de entrada A
-void NFAmove(bitset<MAX_NFA_STATES> X, int A, bitset<MAX_NFA_STATES>& Y) {
-    for (int i = 0; i < N; i++) {
-        if (X[i] == 1) {
-            NFAmove(i, A, Y);
-        }
-    }
-}
-
-// Función principal para la conversión de NFA a DFA
-void nfa2dfa() {
-    D = 1; // Inicializamos el número de estados del DFA
-    DFAstates.push_back(new DFAstate); // Creamos el primer estado del DFA
-    DFAstates[0]->constituentNFAstates[0] = 1; // Marcamos el primer estado NFA como parte del DFA
-    epsilonClosure(0, DFAstates[0]->constituentNFAstates); // Calculamos el cierre epsilon del primer estado NFA
-
-    // Verificamos si el estado resultante es un estado final del NFA
-    for (int j = 0; j < N; j++) {
-        if (DFAstates[0]->constituentNFAstates[j] == 1 && NFA_finalStates.find(j) != NFA_finalStates.end()) {
-            DFAstates[0]->finalState = true; // Marcamos el estado DFA como final si es parte de un estado final NFA
-            DFA_finalStates.push_back(0); // Agregamos el estado DFA a la lista de estados finales
-            break;
-        }
-    }
-
-    incompleteDFAstates.push(0); // Agregamos el primer estado DFA a la cola de estados incompletos
-
-    // Procesamos todos los estados incompletos
-    while (!incompleteDFAstates.empty()) {
-        int X = incompleteDFAstates.front();
-        incompleteDFAstates.pop();
-
-        // Procesamos cada símbolo del alfabeto
-        for (int i = 1; i <= M; i++) {
-            NFAmove(DFAstates[X]->constituentNFAstates, i, DFAstates[X]->transitions[i]); // Calculamos el conjunto de estados NFA alcanzables
-            epsilonClosure(DFAstates[X]->transitions[i], DFAstates[X]->transitions[i]); // Calculamos el cierre epsilon del conjunto de estados alcanzables
-
-            // Buscamos un estado DFA equivalente
-            int j;
-            for (j = 0; j < D; j++) {
-                if (DFAstates[X]->transitions[i] == DFAstates[j]->constituentNFAstates) {
-                    DFAstates[X]->symbolicTransitions[i] = j; // Marcamos la transición simbólica
-                    break;
-                }
+    for (const auto& transition : transitions) {
+        std::map<std::string, std::string> transitionMap;
+        for (const auto& symbolTransition : transition.second) {
+            std::string targetStates;
+            for (const auto& state : symbolTransition.second) {
+                targetStates += state->label + ",";
             }
+            if (!targetStates.empty()) {
+                targetStates.pop_back(); // Remove the last comma
+            }
+            transitionMap[symbolTransition.first] = targetStates;
+        }
+        dict[states[transition.first]] = transitionMap;
+    }
 
-            // Si no encontramos un estado DFA equivalente, creamos uno nuevo
-            if (j == D) {
-                DFAstates.push_back(new DFAstate);
-                DFAstates[D]->constituentNFAstates = DFAstates[X]->transitions[i];
-                DFAstates[D]->finalState = false;
-                for (int k = 0; k < N; k++) {
-                    if (DFAstates[D]->constituentNFAstates[k] == 1 && NFA_finalStates.find(k) != NFA_finalStates.end()) {
-                        DFAstates[D]->finalState = true;
-                        DFA_finalStates.push_back(D);
-                        break;
-                    }
+    return dict;
+}
+
+void DFA::constructDFA() {
+    std::set<State*> initialSet = epsilonClosure({nfa.start});
+    std::queue<std::set<State*>> workQueue;
+    std::map<std::set<State*>, bool> visited;
+
+    states[initialSet] = "S0";
+    initialState = "S0";
+    workQueue.push(initialSet);
+    visited[initialSet] = false;
+
+    while (!workQueue.empty()) {
+        std::set<State*> currentState = workQueue.front();
+        workQueue.pop();
+
+        if (!visited[currentState]) {
+            visited[currentState] = true;
+            for (const auto& symbol : nfa.getSymbols()) {
+                std::set<State*> nextState = epsilonClosure(move(currentState, symbol));
+                if (nextState.empty()) continue;
+
+                if (states.find(nextState) == states.end()) {
+                    std::string nextStateLabel = "S" + std::to_string(states.size());
+                    states[nextState] = nextStateLabel;
+                    workQueue.push(nextState);
                 }
-                DFAstates[X]->symbolicTransitions[i] = D;
-                incompleteDFAstates.push(D);
-                D++;
+
+                transitions[currentState][symbol] = nextState;
             }
         }
     }
-}
 
-
-// Función para escribir el DFA resultante en un archivo
-void writeDFA() {
-    ofstream fout("DFA.txt");
-    fout << D << " " << M << "\n" << DFA_finalStates.size();
-    for (vector<int>::iterator it = DFA_finalStates.begin(); it != DFA_finalStates.end(); it++)
-        fout << " " << *it;
-    fout << "\n";
-    for (int i = 0; i < D; i++) {
-        for (int j = 1; j <= M; j++)
-            fout << i << " " << j << " " << DFAstates[i]->symbolicTransitions[j] << "\n";
-    }
-    fout.close();
-}
-
-// Función principal
-int main() {
-    // Lectura del NFA y construcción del DFA
-    ifstream fin("NFA.txt");
-    fin >> N >> M;
-    NFAstates = new NFAstate[N];
-    fin >> F;
-    for (int i = 0; i < F; i++) {
-        int X;
-        fin >> X;
-        NFA_finalStates.insert(X);
-    }
-    fin >> T;
-    while (T--) {
-        int X, A, Y;
-        fin >> X >> A >> Y;
-        for (int i = 0; i < Y; i++) {
-            int j;
-            fin >> j;
-            NFAstates[X].transitions[A][i] = j;
+    for (const auto& stateSet : states) {
+        for (const auto& state : stateSet.first) {
+            if (state->is_accept) {
+                acceptingStates.insert(stateSet.second);
+                break;
+            }
         }
     }
-    fin.close();
 
-    // Construcción del DFA
-    nfa2dfa();
+    for (const auto& transition : transitions) {
+        for (const auto& symbol : nfa.getSymbols()) {
+            alphabet.insert(symbol);
+        }
+    }
+}
 
-    // Escritura del DFA resultante
-    writeDFA();
+std::set<State*> DFA::epsilonClosure(const std::set<State*>& states) {
+    std::set<State*> closure;
+    std::queue<State*> workQueue;
 
-    return 0;
+    for (auto state : states) {
+        closure.insert(state);
+        workQueue.push(state);
+    }
+
+    while (!workQueue.empty()) {
+        State* currentState = workQueue.front();
+        workQueue.pop();
+
+        for (auto transition : currentState->transitions) {
+            if (transition.first == "ε") {
+                State* nextState = transition.second;
+                if (closure.find(nextState) == closure.end()) {
+                    closure.insert(nextState);
+                    workQueue.push(nextState);
+                }
+            }
+        }
+    }
+
+    return closure;
+}
+
+std::set<State*> DFA::move(const std::set<State*>& states, const std::string& symbol) {
+    std::set<State*> moveResult;
+
+    for (auto state : states) {
+        for (auto transition : state->transitions) {
+            if (transition.first == symbol) {
+                moveResult.insert(transition.second);
+            }
+        }
+    }
+
+    return moveResult;
+}
+
+
+void DFA::printDFA() {
+    std::map<std::string, std::map<std::string, std::string>> dict = toDict();
+    std::stringstream output; // Aquí se guardará la salida
+  
+    output << "-------------------------- DFA  ------------------------------" << std::endl;
+
+    // Imprime el DFA usando el diccionario generado
+    output << "#states" << std::endl;
+    for (const auto& state : states) {
+        output << state.second << std::endl;
+    }
+
+    // Imprime el estado inicial
+    output << "#initial" << std::endl;
+    output << initialState << std::endl;
+
+    // Imprime los estados de aceptación
+    output << "#accepting" << std::endl;
+    for (const auto& state : acceptingStates) {
+        output << state << std::endl;
+    }
+
+    // Imprime el alfabeto
+    output << "#alphabet" << std::endl;
+    for (const auto& symbol : alphabet) {
+        output << symbol << std::endl;
+    }
+
+    // Imprime las transiciones
+    output << "#transitions" << std::endl;
+    for (const auto& stateTransition : dict) {
+        const std::string& sourceState = stateTransition.first;
+        const std::map<std::string, std::string>& transitions = stateTransition.second;
+        for (const auto& symbolTarget : transitions) {
+            const std::string& symbol = symbolTarget.first;
+            const std::string& targetStates = symbolTarget.second;
+            std::istringstream iss(targetStates);
+            std::string targetState;
+            while (std::getline(iss, targetState, ',')) {
+                output << sourceState << ":" << symbol << ">" << targetState << std::endl;
+            }
+        }
+    }
+
+    // Convertir el contenido de stringstream a una cadena
+    std::string outputString = output.str();
+
+    // Ahora puedes usar 'outputString' como desees, por ejemplo, imprimirlo en la consola
+    std::cout << outputString << std::endl;
 }
